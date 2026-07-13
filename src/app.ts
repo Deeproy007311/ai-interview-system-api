@@ -1,6 +1,6 @@
 import express from "express";
 import globalErrorHandler from "./middleware/globalErrorHandler";
-import userRouter from "./user/userRouter";
+import userRouter from "./modules/user/user.route";
 
 const app = express();
 app.use(express.json());

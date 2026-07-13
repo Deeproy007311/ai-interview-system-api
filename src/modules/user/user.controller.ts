@@ -1,10 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import createHttpError from "http-errors";
-import userModel from "./userModel";
+import userModel from "./user.model";
 import { sign } from "jsonwebtoken";
-import { config } from "../config/config";
-import { User } from "./userTypes";
+import { config } from "../../config/config";
+import { IUser, UserDocument } from "./user.types";
+import { AuthRequest } from "../../types/authRequest";
 
 // Register user code
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -34,7 +35,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   //   password -> hash
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  let newUser: User;
+  let newUser: UserDocument;
 
   try {
     newUser = await userModel.create({
@@ -59,7 +60,6 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-
 // Login Logic
 const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   const { email, password } = req.body;
@@ -70,7 +70,7 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
 
     return next(error);
   }
-  let user: User;
+  let user: UserDocument | null;
   // Find User
   try {
     user = await userModel.findOne({ email });
@@ -104,5 +104,23 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+const getCurrentUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = req.user.toObject();
 
-export { createUser, loginUser };
+    delete user.password;
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    return next(createHttpError(500, "Failed to get current user"));
+  }
+};
+
+export { createUser, loginUser, getCurrentUser };
