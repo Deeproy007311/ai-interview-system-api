@@ -1,6 +1,7 @@
 import express from "express";
 import globalErrorHandler from "./middleware/globalErrorHandler";
 import userRouter from "./modules/user/user.route";
+import interviewRouter from "./modules/interview/interview.route";
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users",userRouter);
+app.use("/api/interviews", interviewRouter);
 
 // Global error handler
 app.use(globalErrorHandler);
