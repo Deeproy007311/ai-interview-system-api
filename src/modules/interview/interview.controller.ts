@@ -5,6 +5,8 @@ import { AuthRequest } from "../../types/authRequest";
 import {
   createInterview as createInterviewService,
   getMyInterviews as getMyInterviewsService,
+  getInterviewById as getInterviewByIdService,
+  startInterview as startInterviewService,
 } from "./interview.service";
 
 const createInterview = async (
@@ -16,7 +18,7 @@ const createInterview = async (
     const { interviewType, skills, difficulty, duration } = req.body;
 
     if (!interviewType || !skills || !difficulty || !duration) {
-      return next(createHttpError(400, "All fields are required"));
+      throw createHttpError(400, "All fields are required");
     }
 
     const interview = await createInterviewService({
@@ -30,10 +32,10 @@ const createInterview = async (
     res.status(201).json({
       success: true,
       message: "Interview created successfully",
-      interview,
+      data: interview,
     });
   } catch (error) {
-    return next(createHttpError(500, "Failed to create interview"));
+    next(error);
   }
 };
 
@@ -49,11 +51,57 @@ const getMyInterviews = async (
 
     res.status(200).json({
       success: true,
-      interviews,
+      data: interviews,
     });
   } catch (error) {
-    return next(createHttpError(500, "Failed to get interviews"));
+    next(error);
   }
 };
 
-export { createInterview, getMyInterviews };
+const getInterviewById = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const interview = await getInterviewByIdService(
+      req.params.id,
+      req.user._id.toString(),
+    );
+
+    res.status(200).json({
+      success: true,
+      data: interview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const startInterview = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const interview = await startInterviewService(
+      req.params.id,
+      req.user._id.toString(),
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Interview started successfully",
+      data: interview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export {
+  createInterview,
+  getMyInterviews,
+  getInterviewById,
+  startInterview,
+};
