@@ -6,7 +6,12 @@ const _config = {
   port: process.env.PORT,
   databaseUrl: process.env.MONGO_CONNECTION_STRING,
   env: process.env.NODE_ENV,
+
   jwtSecretKey: process.env.JWT_KEY,
+
+  groqApiKey: process.env.GROQ_API_KEY!,
+  groqModel: process.env.GROQ_MODEL!,
+
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME!,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY!,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET!,

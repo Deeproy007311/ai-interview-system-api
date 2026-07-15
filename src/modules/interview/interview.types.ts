@@ -12,6 +12,24 @@ export type InterviewStatus =
   | "completed"
   | "cancelled";
 
+export type InterviewSectionName =
+  | "introduction"
+  | "resume"
+  | "technical"
+  | "behavioral"
+  | "hr"
+  | "closing";
+
+export interface InterviewSection {
+  name: InterviewSectionName;
+  questions: number;
+}
+
+export interface InterviewPlan {
+  estimatedDuration: number;
+  sections: InterviewSection[];
+}
+
 export interface IInterview {
   owner: Types.ObjectId;
 
@@ -28,6 +46,8 @@ export interface IInterview {
   resume: Types.ObjectId | null;
 
   experienceLevel: ExperienceLevel | null;
+
+  interviewPlan: InterviewPlan | null;
 
   startedAt: Date | null;
 

@@ -7,6 +7,7 @@ const interviewSchema = new Schema<IInterview>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
     mode: {
@@ -18,6 +19,7 @@ const interviewSchema = new Schema<IInterview>(
     skills: [
       {
         type: String,
+        trim: true,
       },
     ],
 
@@ -30,6 +32,7 @@ const interviewSchema = new Schema<IInterview>(
     duration: {
       type: Number,
       required: true,
+      min: 1,
     },
 
     status: {
@@ -50,6 +53,35 @@ const interviewSchema = new Schema<IInterview>(
       default: null,
     },
 
+    interviewPlan: {
+      estimatedDuration: {
+        type: Number,
+        default: null,
+      },
+
+      sections: [
+        {
+          name: {
+            type: String,
+            enum: [
+              "introduction",
+              "resume",
+              "technical",
+              "behavioral",
+              "hr",
+              "closing",
+            ],
+          },
+
+          questions: {
+            type: Number,
+            min: 0,
+          },
+        },
+      ],
+      default: null,
+    },
+
     startedAt: {
       type: Date,
       default: null,
@@ -64,5 +96,17 @@ const interviewSchema = new Schema<IInterview>(
     timestamps: true,
   },
 );
+
+// Fast lookup for user's interviews
+interviewSchema.index({
+  owner: 1,
+  createdAt: -1,
+});
+
+// Prevent multiple active interviews per user (application also enforces this)
+interviewSchema.index({
+  owner: 1,
+  status: 1,
+});
 
 export default model<IInterview>("Interview", interviewSchema);
