@@ -2,7 +2,7 @@ import { NextFunction, Response } from "express";
 import createHttpError from "http-errors";
 
 import { AuthRequest } from "../../types/authRequest";
-import { createResume } from "./resume.service";
+import { createResume, getMyResume } from "./resume.service";
 
 const uploadResume = async (
   req: AuthRequest,
@@ -31,4 +31,21 @@ const uploadResume = async (
   }
 };
 
-export { uploadResume };
+const getResume = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const resume = await getMyResume(req.user._id.toString());
+
+    res.status(200).json({
+      success: true,
+      resume,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { uploadResume, getResume };

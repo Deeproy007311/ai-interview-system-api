@@ -1,6 +1,7 @@
 import express from "express";
 
 import auth from "../../middleware/auth";
+
 import {
   createInterview,
   getMyInterviews,
@@ -10,12 +11,16 @@ import {
 
 const interviewRouter = express.Router();
 
+// Create Interview
 interviewRouter.post("/", auth, createInterview);
 
+// Get All Interviews
 interviewRouter.get("/", auth, getMyInterviews);
 
+// Get Interview By Id
 interviewRouter.get("/:id", auth, getInterviewById);
 
+// Start Interview
 interviewRouter.post("/:id/start", auth, startInterview);
 
 export default interviewRouter;

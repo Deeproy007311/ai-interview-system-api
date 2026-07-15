@@ -15,18 +15,31 @@ const createInterview = async (
   next: NextFunction,
 ) => {
   try {
-    const { interviewType, skills, difficulty, duration } = req.body;
+    const {
+      mode,
+      skills,
+      difficulty,
+      duration,
+      resume,
+      experienceLevel,
+    } = req.body;
 
-    if (!interviewType || !skills || !difficulty || !duration) {
-      throw createHttpError(400, "All fields are required");
+    // Basic validation only
+    if (!mode || !difficulty || !duration) {
+      throw createHttpError(
+        400,
+        "Mode, difficulty and duration are required."
+      );
     }
 
     const interview = await createInterviewService({
       owner: req.user._id,
-      interviewType,
-      skills,
+      mode,
+      skills: skills || [],
       difficulty,
       duration,
+      resume,
+      experienceLevel,
     });
 
     res.status(201).json({
@@ -46,7 +59,7 @@ const getMyInterviews = async (
 ) => {
   try {
     const interviews = await getMyInterviewsService(
-      req.user._id.toString(),
+      req.user._id.toString()
     );
 
     res.status(200).json({
@@ -66,7 +79,7 @@ const getInterviewById = async (
   try {
     const interview = await getInterviewByIdService(
       req.params.id,
-      req.user._id.toString(),
+      req.user._id.toString()
     );
 
     res.status(200).json({
@@ -86,7 +99,7 @@ const startInterview = async (
   try {
     const interview = await startInterviewService(
       req.params.id,
-      req.user._id.toString(),
+      req.user._id.toString()
     );
 
     res.status(200).json({

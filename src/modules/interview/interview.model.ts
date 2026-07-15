@@ -9,16 +9,15 @@ const interviewSchema = new Schema<IInterview>(
       required: true,
     },
 
-    interviewType: {
+    mode: {
       type: String,
-      enum: ["technical", "hr", "resume"],
+      enum: ["resume", "skills", "mixed", "hr"],
       required: true,
     },
 
     skills: [
       {
         type: String,
-        required: true,
       },
     ],
 
@@ -44,6 +43,13 @@ const interviewSchema = new Schema<IInterview>(
       ref: "Resume",
       default: null,
     },
+
+    experienceLevel: {
+      type: String,
+      enum: ["fresher", "experienced"],
+      default: null,
+    },
+
     startedAt: {
       type: Date,
       default: null,

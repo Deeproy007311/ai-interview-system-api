@@ -1,9 +1,13 @@
 import { Types } from "mongoose";
 import createHttpError from "http-errors";
+
 import InterviewModel from "./interview.model";
 import { CreateInterviewDTO } from "./interview.dto";
 
+import { getResumeById } from "../resume/resume.service";
+
 const createInterview = async (data: CreateInterviewDTO) => {
+  // Allow only one active interview
   const activeInterview = await InterviewModel.findOne({
     owner: data.owner,
     status: {
@@ -13,6 +17,58 @@ const createInterview = async (data: CreateInterviewDTO) => {
 
   if (activeInterview) {
     throw createHttpError(409, "You already have an active interview.");
+  }
+
+  // Resume Interview
+  if (data.mode === "resume") {
+    if (!data.resume) {
+      throw createHttpError(400, "Resume is required for resume interview.");
+    }
+
+    const resume = await getResumeById(data.resume.toString());
+
+    if (!resume) {
+      throw createHttpError(404, "Resume not found.");
+    }
+
+    if (resume.owner.toString() !== data.owner.toString()) {
+      throw createHttpError(403, "You are not authorized to use this resume.");
+    }
+  }
+
+  // Skills Interview
+  if (data.mode === "skills") {
+    if (!data.skills.length) {
+      throw createHttpError(400, "Please select at least one skill.");
+    }
+  }
+
+  // Mixed Interview
+  if (data.mode === "mixed") {
+    if (!data.resume) {
+      throw createHttpError(400, "Resume is required for mixed interview.");
+    }
+
+    const resume = await getResumeById(data.resume.toString());
+
+    if (!resume) {
+      throw createHttpError(404, "Resume not found.");
+    }
+
+    if (resume.owner.toString() !== data.owner.toString()) {
+      throw createHttpError(403, "You are not authorized to use this resume.");
+    }
+
+    if (!data.skills.length) {
+      throw createHttpError(400, "Please select at least one skill.");
+    }
+  }
+
+  // HR Interview
+  if (data.mode === "hr") {
+    if (!data.experienceLevel) {
+      throw createHttpError(400, "Experience level is required.");
+    }
   }
 
   const interview = await InterviewModel.create(data);

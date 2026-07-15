@@ -1,8 +1,10 @@
 import { HydratedDocument, Types } from "mongoose";
 
-export type InterviewType = "technical" | "hr" | "resume";
+export type InterviewMode = "resume" | "skills" | "mixed" | "hr";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
+
+export type ExperienceLevel = "fresher" | "experienced";
 
 export type InterviewStatus =
   | "pending"
@@ -13,7 +15,7 @@ export type InterviewStatus =
 export interface IInterview {
   owner: Types.ObjectId;
 
-  interviewType: InterviewType;
+  mode: InterviewMode;
 
   skills: string[];
 
@@ -23,7 +25,9 @@ export interface IInterview {
 
   status: InterviewStatus;
 
-  resume?: Types.ObjectId | null;
+  resume: Types.ObjectId | null;
+
+  experienceLevel: ExperienceLevel | null;
 
   startedAt: Date | null;
 
