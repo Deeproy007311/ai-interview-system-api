@@ -6,8 +6,9 @@ import {
   createInterview as createInterviewService,
   getMyInterviews as getMyInterviewsService,
   getInterviewById as getInterviewByIdService,
-  startInterview as startInterviewService,
 } from "./interview.service";
+
+import { startInterviewEngine } from "./interview.engine";
 
 const createInterview = async (
   req: AuthRequest,
@@ -97,15 +98,19 @@ const startInterview = async (
   next: NextFunction,
 ) => {
   try {
-    const interview = await startInterviewService(
-      req.params.id,
-      req.user._id.toString()
-    );
+    const { id: interviewId } = req.params;
+    const userId = req.user._id.toString();
+
+    if (!interviewId) {
+      throw createHttpError(400, "Interview ID is required.");
+    }
+
+    const result = await startInterviewEngine(interviewId, userId);
 
     res.status(200).json({
       success: true,
       message: "Interview started successfully",
-      data: interview,
+      data: result,
     });
   } catch (error) {
     next(error);

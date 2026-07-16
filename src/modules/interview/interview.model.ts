@@ -82,6 +82,11 @@ const interviewSchema = new Schema<IInterview>(
       default: null,
     },
 
+    welcomeMessage: {
+      type: String,
+      default: null,
+    },
+
     startedAt: {
       type: Date,
       default: null,

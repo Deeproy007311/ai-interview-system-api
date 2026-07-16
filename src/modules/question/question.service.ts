@@ -4,6 +4,7 @@ import createHttpError from "http-errors";
 import QuestionModel from "./question.model";
 import { CreateQuestionDTO } from "./question.dto";
 import { AIQuestion } from "../ai/ai.types";
+import { QuestionDocument } from "./question.types";
 
 const createQuestions = async (questions: CreateQuestionDTO[]) => {
   if (!questions.length) {
@@ -16,7 +17,7 @@ const createQuestions = async (questions: CreateQuestionDTO[]) => {
 const createQuestionsFromAI = async (
   interviewId: Types.ObjectId,
   questions: AIQuestion[],
-) => {
+): Promise<QuestionDocument[]> => {
   if (!questions.length) {
     throw createHttpError(400, "AI did not generate any questions.");
   }
@@ -32,7 +33,10 @@ const createQuestionsFromAI = async (
     parentQuestion: null,
   }));
 
-  return await QuestionModel.insertMany(payload);
+  // Mongoose 9 insertMany returns hydrated documents at runtime.
+  // We assert the type explicitly because TS infers a raw union type
+  // that is not directly assignable to HydratedDocument<IQuestion>.
+  return QuestionModel.insertMany(payload) as unknown as Promise<QuestionDocument[]>;
 };
 
 const getQuestionsByInterview = async (interviewId: string) => {

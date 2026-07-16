@@ -2,31 +2,96 @@ import createHttpError from "http-errors";
 
 import { AIInterviewResponse, GenerateInterviewOptions } from "./ai.types";
 import { buildInterviewPrompt } from "./ai.prompt";
+import { QuestionSection } from "../question/question.types";
 
 import { generateCompletion } from "../../services/llm.service";
 
-const parseAIResponse = (content: string): AIInterviewResponse => {
-  try {
-    const parsed = JSON.parse(content) as AIInterviewResponse;
+const VALID_SECTIONS: QuestionSection[] = [
+  "introduction",
+  "resume",
+  "technical",
+  "behavioral",
+  "hr",
+  "closing",
+];
+
+const isValidSection = (value: unknown): value is QuestionSection =>
+  typeof value === "string" &&
+  VALID_SECTIONS.includes(value as QuestionSection);
+
+const validateAIResponse = (parsed: AIInterviewResponse): void => {
+  if (!parsed.welcomeMessage || typeof parsed.welcomeMessage !== "string") {
+    throw new Error("AI response is missing a welcome message.");
+  }
+
+  if (
+    !parsed.interviewPlan ||
+    !Array.isArray(parsed.interviewPlan.sections) ||
+    parsed.interviewPlan.sections.length === 0
+  ) {
+    throw new Error("AI response is missing a valid interview plan.");
+  }
+
+  for (const section of parsed.interviewPlan.sections) {
+    if (!isValidSection(section.name)) {
+      throw new Error(
+        `AI response contains an invalid plan section: ${section.name}`,
+      );
+    }
+
+    if (typeof section.questions !== "number" || section.questions < 0) {
+      throw new Error(
+        `AI response has an invalid question count for section: ${section.name}`,
+      );
+    }
+  }
+
+  if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+    throw new Error("AI returned no questions.");
+  }
+
+  for (const question of parsed.questions) {
+    if (!isValidSection(question.section)) {
+      throw new Error(
+        `AI generated a question with an invalid section: ${question.section}`,
+      );
+    }
 
     if (
-      !parsed.welcomeMessage ||
-      !parsed.interviewPlan ||
-      !Array.isArray(parsed.questions)
+      !question.question ||
+      typeof question.question !== "string" ||
+      !question.question.trim()
     ) {
-      throw new Error("Invalid AI response.");
+      throw new Error("AI generated a question with empty text.");
     }
 
-    if (parsed.questions.length === 0) {
-      throw new Error("AI returned no questions.");
+    if (!Array.isArray(question.expectedTopics)) {
+      question.expectedTopics = [];
     }
-
-    return parsed;
-  } catch (error) {
-    console.error("AI Response Parse Error:", error);
-
-    throw createHttpError(500, "Failed to parse AI interview response.");
   }
+};
+
+const parseAIResponse = (content: string): AIInterviewResponse => {
+  let parsed: AIInterviewResponse;
+
+  try {
+    parsed = JSON.parse(content) as AIInterviewResponse;
+  } catch (error) {
+    console.error("AI Response JSON Parse Error:", error);
+    throw createHttpError(500, "AI returned malformed JSON.");
+  }
+
+  try {
+    validateAIResponse(parsed);
+  } catch (error) {
+    console.error("AI Response Validation Error:", error, parsed);
+    throw createHttpError(
+      500,
+      "AI returned an interview response in an unexpected format.",
+    );
+  }
+
+  return parsed;
 };
 
 const generateInterview = async (

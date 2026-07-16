@@ -48,6 +48,8 @@ export interface IInterview {
   experienceLevel: ExperienceLevel | null;
 
   interviewPlan: InterviewPlan | null;
+  
+  welcomeMessage: string | null; // NEW
 
   startedAt: Date | null;
 

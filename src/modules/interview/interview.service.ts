@@ -102,24 +102,28 @@ const getInterviewById = async (interviewId: string, userId: string) => {
 const startInterview = async (interviewId: string, userId: string) => {
   const interview = await getInterviewById(interviewId, userId);
 
-  if (interview.status === "completed") {
-    throw createHttpError(400, "Interview has already been completed.");
-  }
-
-  if (interview.status === "cancelled") {
-    throw createHttpError(400, "Interview has been cancelled.");
-  }
-
-  if (interview.status === "in_progress") {
-    throw createHttpError(400, "Interview is already in progress.");
+  if (interview.status !== "pending") {
+    switch (interview.status) {
+      case "in_progress":
+        throw createHttpError(400, "Interview is already in progress.");
+      case "completed":
+        throw createHttpError(400, "Interview has already been completed.");
+      case "cancelled":
+        throw createHttpError(400, "Interview has been cancelled.");
+      default:
+        throw createHttpError(400, "Interview cannot be started.");
+    }
   }
 
   return interview;
 };
 
-const updateInterviewPlan = async (
+const saveInterviewContent = async (
   interviewId: string,
-  interviewPlan: InterviewPlan,
+  content: {
+    interviewPlan: InterviewPlan;
+    welcomeMessage: string;
+  },
 ) => {
   const interview = await InterviewModel.findById(interviewId);
 
@@ -127,7 +131,8 @@ const updateInterviewPlan = async (
     throw createHttpError(404, "Interview not found.");
   }
 
-  interview.interviewPlan = interviewPlan;
+  interview.interviewPlan = content.interviewPlan;
+  interview.welcomeMessage = content.welcomeMessage;
 
   await interview.save();
 
@@ -184,7 +189,7 @@ export {
   getMyInterviews,
   getInterviewById,
   startInterview,
-  updateInterviewPlan,
+  saveInterviewContent,
   markInterviewStarted,
   completeInterview,
   cancelInterview,
