@@ -3,11 +3,28 @@ import createHttpError from "http-errors";
 
 import InterviewModel from "./interview.model";
 import { CreateInterviewDTO } from "./interview.dto";
+import { InterviewPlan } from "./interview.types";
 
 import { getResumeById } from "../resume/resume.service";
 
+const validateResumeOwnership = async (
+  resumeId: Types.ObjectId,
+  ownerId: Types.ObjectId,
+) => {
+  const resume = await getResumeById(resumeId.toString());
+
+  if (!resume) {
+    throw createHttpError(404, "Resume not found.");
+  }
+
+  if (resume.owner.toString() !== ownerId.toString()) {
+    throw createHttpError(403, "You are not authorized to use this resume.");
+  }
+
+  return resume;
+};
+
 const createInterview = async (data: CreateInterviewDTO) => {
-  // Allow only one active interview
   const activeInterview = await InterviewModel.findOne({
     owner: data.owner,
     status: {
@@ -19,61 +36,41 @@ const createInterview = async (data: CreateInterviewDTO) => {
     throw createHttpError(409, "You already have an active interview.");
   }
 
-  // Resume Interview
-  if (data.mode === "resume") {
-    if (!data.resume) {
-      throw createHttpError(400, "Resume is required for resume interview.");
-    }
+  switch (data.mode) {
+    case "resume":
+      if (!data.resume) {
+        throw createHttpError(400, "Resume is required for resume interview.");
+      }
 
-    const resume = await getResumeById(data.resume.toString());
+      await validateResumeOwnership(data.resume, data.owner);
+      break;
 
-    if (!resume) {
-      throw createHttpError(404, "Resume not found.");
-    }
+    case "skills":
+      if (!data.skills.length) {
+        throw createHttpError(400, "Please select at least one skill.");
+      }
+      break;
 
-    if (resume.owner.toString() !== data.owner.toString()) {
-      throw createHttpError(403, "You are not authorized to use this resume.");
-    }
+    case "mixed":
+      if (!data.resume) {
+        throw createHttpError(400, "Resume is required for mixed interview.");
+      }
+
+      await validateResumeOwnership(data.resume, data.owner);
+
+      if (!data.skills.length) {
+        throw createHttpError(400, "Please select at least one skill.");
+      }
+      break;
+
+    case "hr":
+      if (!data.experienceLevel) {
+        throw createHttpError(400, "Experience level is required.");
+      }
+      break;
   }
 
-  // Skills Interview
-  if (data.mode === "skills") {
-    if (!data.skills.length) {
-      throw createHttpError(400, "Please select at least one skill.");
-    }
-  }
-
-  // Mixed Interview
-  if (data.mode === "mixed") {
-    if (!data.resume) {
-      throw createHttpError(400, "Resume is required for mixed interview.");
-    }
-
-    const resume = await getResumeById(data.resume.toString());
-
-    if (!resume) {
-      throw createHttpError(404, "Resume not found.");
-    }
-
-    if (resume.owner.toString() !== data.owner.toString()) {
-      throw createHttpError(403, "You are not authorized to use this resume.");
-    }
-
-    if (!data.skills.length) {
-      throw createHttpError(400, "Please select at least one skill.");
-    }
-  }
-
-  // HR Interview
-  if (data.mode === "hr") {
-    if (!data.experienceLevel) {
-      throw createHttpError(400, "Experience level is required.");
-    }
-  }
-
-  const interview = await InterviewModel.create(data);
-
-  return interview;
+  return await InterviewModel.create(data);
 };
 
 const getMyInterviews = async (userId: string) => {
@@ -92,7 +89,7 @@ const getInterviewById = async (interviewId: string, userId: string) => {
   const interview = await InterviewModel.findById(interviewId);
 
   if (!interview) {
-    throw createHttpError(404, "Interview not found");
+    throw createHttpError(404, "Interview not found.");
   }
 
   if (interview.owner.toString() !== userId) {
@@ -117,6 +114,33 @@ const startInterview = async (interviewId: string, userId: string) => {
     throw createHttpError(400, "Interview is already in progress.");
   }
 
+  return interview;
+};
+
+const updateInterviewPlan = async (
+  interviewId: string,
+  interviewPlan: InterviewPlan,
+) => {
+  const interview = await InterviewModel.findById(interviewId);
+
+  if (!interview) {
+    throw createHttpError(404, "Interview not found.");
+  }
+
+  interview.interviewPlan = interviewPlan;
+
+  await interview.save();
+
+  return interview;
+};
+
+const markInterviewStarted = async (interviewId: string) => {
+  const interview = await InterviewModel.findById(interviewId);
+
+  if (!interview) {
+    throw createHttpError(404, "Interview not found.");
+  }
+
   interview.status = "in_progress";
   interview.startedAt = new Date();
 
@@ -125,4 +149,43 @@ const startInterview = async (interviewId: string, userId: string) => {
   return interview;
 };
 
-export { createInterview, getMyInterviews, getInterviewById, startInterview };
+const completeInterview = async (interviewId: string) => {
+  const interview = await InterviewModel.findById(interviewId);
+
+  if (!interview) {
+    throw createHttpError(404, "Interview not found.");
+  }
+
+  interview.status = "completed";
+  interview.endedAt = new Date();
+
+  await interview.save();
+
+  return interview;
+};
+
+const cancelInterview = async (interviewId: string) => {
+  const interview = await InterviewModel.findById(interviewId);
+
+  if (!interview) {
+    throw createHttpError(404, "Interview not found.");
+  }
+
+  interview.status = "cancelled";
+  interview.endedAt = new Date();
+
+  await interview.save();
+
+  return interview;
+};
+
+export {
+  createInterview,
+  getMyInterviews,
+  getInterviewById,
+  startInterview,
+  updateInterviewPlan,
+  markInterviewStarted,
+  completeInterview,
+  cancelInterview,
+};

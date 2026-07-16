@@ -1,13 +1,4 @@
-import { InterviewMode } from "./ai.types";
-
-interface BuildPromptOptions {
-  mode: InterviewMode;
-  difficulty: string;
-  duration: number;
-  skills?: string[];
-  resumeText?: string;
-  experienceLevel?: string;
-}
+import { GenerateInterviewOptions } from "./ai.types";
 
 interface InterviewPrompt {
   systemPrompt: string;
@@ -27,16 +18,16 @@ Rules:
 - Never reveal answers.
 - Never provide hints.
 - Never explain whether an answer is correct.
-- Ask only interview questions.
+- Ask only one interview question at a time.
 - Questions should gradually increase in difficulty.
-- Questions must feel realistic and production-oriented.
+- Questions must feel practical and production-oriented.
 - Avoid duplicate questions.
 - Include follow-up questions only when appropriate.
 - Return ONLY valid JSON.
 `;
 
 const OUTPUT_FORMAT = `
-Return ONLY valid JSON in this exact structure.
+Return ONLY valid JSON in exactly this structure.
 
 {
   "welcomeMessage": "Welcome message",
@@ -68,17 +59,14 @@ Return ONLY valid JSON in this exact structure.
   ]
 }
 
-Do not return markdown.
-
-Do not wrap JSON inside code blocks.
-
-Do not explain anything.
-
 Return only JSON.
+Do not return markdown.
+Do not wrap JSON inside code blocks.
+Do not explain anything.
 `;
 
-const buildResumePrompt = (options: BuildPromptOptions): string => `
-Conduct a Resume Interview.
+const buildResumePrompt = (options: GenerateInterviewOptions): string => `
+Conduct a resume interview.
 
 Resume:
 
@@ -90,20 +78,20 @@ ${options.difficulty}
 Duration:
 ${options.duration} minutes
 
-Instructions:
+Requirements:
 
-- Start with one introduction question.
-- Focus mainly on resume projects.
-- Ask about technologies used.
-- Ask architecture-related questions.
+- Start with exactly one introduction question.
+- Focus on projects.
+- Focus on technologies.
+- Ask architecture decisions.
 - Ask experience-based questions.
-- End with one closing question.
+- Finish with exactly one closing question.
 
 ${OUTPUT_FORMAT}
 `;
 
-const buildSkillsPrompt = (options: BuildPromptOptions): string => `
-Conduct a Skills Interview.
+const buildSkillsPrompt = (options: GenerateInterviewOptions): string => `
+Conduct a technical interview.
 
 Skills:
 
@@ -115,18 +103,18 @@ ${options.difficulty}
 Duration:
 ${options.duration} minutes
 
-Instructions:
+Requirements:
 
-- Generate practical questions.
-- Include real-world scenarios.
-- Avoid theory-only questions.
+- Practical questions only.
+- Scenario-based questions.
 - Increase difficulty gradually.
+- Avoid theory-only questions.
 
 ${OUTPUT_FORMAT}
 `;
 
-const buildMixedPrompt = (options: BuildPromptOptions): string => `
-Conduct a Mixed Interview.
+const buildMixedPrompt = (options: GenerateInterviewOptions): string => `
+Conduct a mixed interview.
 
 Resume:
 
@@ -142,9 +130,9 @@ ${options.difficulty}
 Duration:
 ${options.duration} minutes
 
-Instructions:
+Requirements:
 
-Mix questions from:
+Combine:
 
 - Resume
 - Projects
@@ -157,18 +145,15 @@ Finish with one behavioral question.
 ${OUTPUT_FORMAT}
 `;
 
-const buildHRPrompt = (options: BuildPromptOptions): string => `
-Conduct an HR Interview.
+const buildHRPrompt = (options: GenerateInterviewOptions): string => `
+Conduct an HR interview.
 
-Candidate Experience:
+Experience Level:
 
 ${options.experienceLevel}
 
 Duration:
-
 ${options.duration} minutes
-
-Instructions:
 
 Evaluate:
 
@@ -176,8 +161,8 @@ Evaluate:
 - Leadership
 - Teamwork
 - Career Goals
-- Conflict Resolution
 - Decision Making
+- Conflict Resolution
 - Pressure Handling
 
 Do NOT ask technical questions.
@@ -186,7 +171,7 @@ ${OUTPUT_FORMAT}
 `;
 
 export const buildInterviewPrompt = (
-  options: BuildPromptOptions,
+  options: GenerateInterviewOptions,
 ): InterviewPrompt => {
   switch (options.mode) {
     case "resume":

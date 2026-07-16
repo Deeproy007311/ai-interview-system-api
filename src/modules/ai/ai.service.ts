@@ -1,35 +1,31 @@
 import createHttpError from "http-errors";
 
-import { AIInterviewResponse, InterviewMode } from "./ai.types";
+import { AIInterviewResponse, GenerateInterviewOptions } from "./ai.types";
 import { buildInterviewPrompt } from "./ai.prompt";
 
 import { generateCompletion } from "../../services/llm.service";
-
-interface GenerateInterviewOptions {
-  mode: InterviewMode;
-
-  difficulty: string;
-
-  duration: number;
-
-  skills?: string[];
-
-  resumeText?: string;
-
-  experienceLevel?: string;
-}
 
 const parseAIResponse = (content: string): AIInterviewResponse => {
   try {
     const parsed = JSON.parse(content) as AIInterviewResponse;
 
-    if (!parsed.welcomeMessage || !parsed.interviewPlan || !parsed.questions) {
-      throw new Error();
+    if (
+      !parsed.welcomeMessage ||
+      !parsed.interviewPlan ||
+      !Array.isArray(parsed.questions)
+    ) {
+      throw new Error("Invalid AI response.");
+    }
+
+    if (parsed.questions.length === 0) {
+      throw new Error("AI returned no questions.");
     }
 
     return parsed;
-  } catch {
-    throw createHttpError(500, "Invalid AI response format.");
+  } catch (error) {
+    console.error("AI Response Parse Error:", error);
+
+    throw createHttpError(500, "Failed to parse AI interview response.");
   }
 };
 

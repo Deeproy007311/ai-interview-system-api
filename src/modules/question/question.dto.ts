@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { QuestionSection } from "./question.types";
+import { QuestionSection, QuestionStatus } from "./question.types";
 
 export interface CreateQuestionDTO {
   interview: Types.ObjectId;
@@ -11,6 +11,8 @@ export interface CreateQuestionDTO {
   question: string;
 
   expectedTopics: string[];
+
+  status: QuestionStatus;
 
   isFollowUp?: boolean;
 

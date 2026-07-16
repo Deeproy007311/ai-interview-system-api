@@ -1,12 +1,26 @@
-export type InterviewMode = "resume" | "skills" | "mixed" | "hr";
+import {
+  InterviewMode,
+  InterviewPlan,
+  Difficulty,
+  ExperienceLevel,
+} from "../interview/interview.types";
+import { QuestionSection } from "../question/question.types";
 
-export type QuestionSection =
-  | "introduction"
-  | "resume"
-  | "technical"
-  | "behavioral"
-  | "hr"
-  | "closing";
+export { InterviewMode };
+
+export interface GenerateInterviewOptions {
+  mode: InterviewMode;
+
+  difficulty: Difficulty;
+
+  duration: number;
+
+  skills?: string[];
+
+  resumeText?: string;
+
+  experienceLevel?: ExperienceLevel | null;
+}
 
 export interface AIQuestion {
   order: number;
@@ -18,19 +32,10 @@ export interface AIQuestion {
   expectedTopics: string[];
 }
 
-export interface AIInterviewPlan {
-  estimatedDuration: number;
-
-  sections: {
-    name: QuestionSection;
-    questions: number;
-  }[];
-}
-
 export interface AIInterviewResponse {
   welcomeMessage: string;
 
-  interviewPlan: AIInterviewPlan;
+  interviewPlan: InterviewPlan;
 
   questions: AIQuestion[];
 }

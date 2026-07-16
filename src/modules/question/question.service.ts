@@ -3,6 +3,7 @@ import createHttpError from "http-errors";
 
 import QuestionModel from "./question.model";
 import { CreateQuestionDTO } from "./question.dto";
+import { AIQuestion } from "../ai/ai.types";
 
 const createQuestions = async (questions: CreateQuestionDTO[]) => {
   if (!questions.length) {
@@ -10,6 +11,28 @@ const createQuestions = async (questions: CreateQuestionDTO[]) => {
   }
 
   return await QuestionModel.insertMany(questions);
+};
+
+const createQuestionsFromAI = async (
+  interviewId: Types.ObjectId,
+  questions: AIQuestion[],
+) => {
+  if (!questions.length) {
+    throw createHttpError(400, "AI did not generate any questions.");
+  }
+
+  const payload: CreateQuestionDTO[] = questions.map((question) => ({
+    interview: interviewId,
+    order: question.order,
+    section: question.section,
+    question: question.question,
+    expectedTopics: question.expectedTopics,
+    status: "pending",
+    isFollowUp: false,
+    parentQuestion: null,
+  }));
+
+  return await QuestionModel.insertMany(payload);
 };
 
 const getQuestionsByInterview = async (interviewId: string) => {
@@ -38,26 +61,46 @@ const getQuestionById = async (questionId: string) => {
   return question;
 };
 
-const getNextQuestion = async (interviewId: string, currentOrder: number) => {
+const getCurrentQuestion = async (interviewId: string) => {
   if (!Types.ObjectId.isValid(interviewId)) {
     throw createHttpError(400, "Invalid interview id.");
   }
 
-  const nextQuestion = await QuestionModel.findOne({
+  return await QuestionModel.findOne({
     interview: interviewId,
-    order: {
-      $gt: currentOrder,
-    },
+    status: "asked",
+  });
+};
+
+const getNextQuestion = async (interviewId: string) => {
+  if (!Types.ObjectId.isValid(interviewId)) {
+    throw createHttpError(400, "Invalid interview id.");
+  }
+
+  return await QuestionModel.findOne({
+    interview: interviewId,
+    status: "pending",
   }).sort({
     order: 1,
   });
+};
 
-  return nextQuestion;
+const markQuestionAsAsked = async (questionId: string) => {
+  const question = await getQuestionById(questionId);
+
+  question.status = "asked";
+
+  await question.save();
+
+  return question;
 };
 
 export {
   createQuestions,
+  createQuestionsFromAI,
   getQuestionsByInterview,
   getQuestionById,
+  getCurrentQuestion,
   getNextQuestion,
+  markQuestionAsAsked,
 };
