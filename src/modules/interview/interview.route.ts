@@ -7,6 +7,7 @@ import {
   getMyInterviews,
   getInterviewById,
   startInterview,
+  submitAnswer,
 } from "./interview.controller";
 
 const interviewRouter = express.Router();
@@ -22,5 +23,7 @@ interviewRouter.get("/:id", auth, getInterviewById);
 
 // Start Interview
 interviewRouter.post("/:id/start", auth, startInterview);
+
+interviewRouter.post("/:id/answer", auth, submitAnswer);
 
 export default interviewRouter;

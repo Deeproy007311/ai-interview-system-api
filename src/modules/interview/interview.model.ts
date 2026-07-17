@@ -1,6 +1,41 @@
 import { Schema, model } from "mongoose";
 import { IInterview } from "./interview.types";
 
+const interviewSectionSchema = new Schema(
+  {
+    name: {
+      type: String,
+      enum: [
+        "introduction",
+        "resume",
+        "technical",
+        "behavioral",
+        "hr",
+        "closing",
+      ],
+    },
+    questions: {
+      type: Number,
+      min: 0,
+    },
+  },
+  { _id: false }, // no need for an _id on each section entry
+);
+
+const interviewPlanSchema = new Schema(
+  {
+    estimatedDuration: {
+      type: Number,
+      default: null,
+    },
+    sections: {
+      type: [interviewSectionSchema],
+      default: [],
+    },
+  },
+  { _id: false }, // no need for an _id on the plan subdocument itself
+);
+
 const interviewSchema = new Schema<IInterview>(
   {
     owner: {
@@ -54,31 +89,7 @@ const interviewSchema = new Schema<IInterview>(
     },
 
     interviewPlan: {
-      estimatedDuration: {
-        type: Number,
-        default: null,
-      },
-
-      sections: [
-        {
-          name: {
-            type: String,
-            enum: [
-              "introduction",
-              "resume",
-              "technical",
-              "behavioral",
-              "hr",
-              "closing",
-            ],
-          },
-
-          questions: {
-            type: Number,
-            min: 0,
-          },
-        },
-      ],
+      type: interviewPlanSchema,
       default: null,
     },
 

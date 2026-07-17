@@ -1,4 +1,4 @@
-import { GenerateInterviewOptions } from "./ai.types";
+import { GenerateInterviewOptions, EvaluateAnswerOptions } from "./ai.types";
 
 interface InterviewPrompt {
   systemPrompt: string;
@@ -201,4 +201,74 @@ export const buildInterviewPrompt = (
     default:
       throw new Error("Unsupported interview mode.");
   }
+};
+
+const EVALUATION_SYSTEM_PROMPT = `
+You are a Senior Technical Interviewer evaluating a candidate's answer during a live mock interview.
+
+Rules:
+
+- Be an objective, consistent grader. Do not be lenient or harsh based on tone — grade on substance.
+- Never reveal the "correct" answer in your feedback text.
+- Feedback is for later review only — the candidate will not see it during the interview.
+- Only request a follow-up if the answer is genuinely incomplete, vague, or worth probing deeper. Most answers should NOT need one — do not request a follow-up just to be thorough.
+- A follow-up question must dig into the SAME topic the candidate just answered, never introduce a new topic.
+- Return ONLY valid JSON.
+`;
+
+const EVALUATION_OUTPUT_FORMAT = `
+Return ONLY valid JSON in exactly this structure.
+
+{
+  "score": 78,
+  "technicalScore": 80,
+  "communicationScore": 75,
+  "confidenceScore": 70,
+  "feedback": "One or two sentences of specific, constructive feedback.",
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "missingConcepts": ["..."],
+  "needsFollowUp": false,
+  "followUpQuestion": null
+}
+
+If needsFollowUp is true, followUpQuestion must instead be:
+
+{
+  "question": "A single, specific follow-up question.",
+  "expectedTopics": ["..."]
+}
+
+All scores are integers from 0 to 100.
+Return only JSON.
+Do not return markdown.
+Do not wrap JSON inside code blocks.
+Do not explain anything.
+`;
+
+export const buildEvaluationPrompt = (
+  options: EvaluateAnswerOptions,
+): InterviewPrompt => {
+  const userPrompt = `
+Evaluate this candidate's answer.
+
+Interview Section: ${options.section}
+Difficulty: ${options.difficulty}
+
+Question asked:
+${options.question}
+
+Expected topics for this question:
+${options.expectedTopics.join(", ") || "None specified"}
+
+Candidate's answer:
+${options.transcript}
+
+${EVALUATION_OUTPUT_FORMAT}
+`;
+
+  return {
+    systemPrompt: EVALUATION_SYSTEM_PROMPT,
+    userPrompt,
+  };
 };

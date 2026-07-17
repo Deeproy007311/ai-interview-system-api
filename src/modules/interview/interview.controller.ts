@@ -8,7 +8,7 @@ import {
   getInterviewById as getInterviewByIdService,
 } from "./interview.service";
 
-import { startInterviewEngine } from "./interview.engine";
+import { startInterviewEngine, submitAnswerEngine } from "./interview.engine";
 
 const createInterview = async (
   req: AuthRequest,
@@ -117,9 +117,40 @@ const startInterview = async (
   }
 };
 
+const submitAnswer = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { questionId, transcript } = req.body;
+
+    if (!questionId || !transcript) {
+      throw createHttpError(400, "questionId and transcript are required.");
+    }
+
+    const result = await submitAnswerEngine(req.user._id.toString(), {
+      interviewId: req.params.id,
+      questionId,
+      transcript,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.interviewComplete
+        ? "Interview completed"
+        : "Answer submitted successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   createInterview,
   getMyInterviews,
   getInterviewById,
   startInterview,
+  submitAnswer
 };

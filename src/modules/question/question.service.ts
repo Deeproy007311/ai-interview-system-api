@@ -99,6 +99,34 @@ const markQuestionAsAsked = async (questionId: string) => {
   return question;
 };
 
+const markQuestionAnswered = async (questionId: string) => {
+  const question = await getQuestionById(questionId);
+
+  question.status = "answered";
+
+  await question.save();
+
+  return question;
+};
+
+const markQuestionEvaluated = async (questionId: string) => {
+  const question = await getQuestionById(questionId);
+
+  question.status = "evaluated";
+
+  await question.save();
+
+  return question;
+};
+
+const getQuestionCount = async (interviewId: string) => {
+  if (!Types.ObjectId.isValid(interviewId)) {
+    throw createHttpError(400, "Invalid interview id.");
+  }
+
+  return await QuestionModel.countDocuments({ interview: interviewId });
+};
+
 export {
   createQuestions,
   createQuestionsFromAI,
@@ -107,4 +135,7 @@ export {
   getCurrentQuestion,
   getNextQuestion,
   markQuestionAsAsked,
+  markQuestionEvaluated,
+  getQuestionCount,
+  markQuestionAnswered
 };

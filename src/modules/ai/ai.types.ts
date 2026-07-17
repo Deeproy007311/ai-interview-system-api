@@ -39,3 +39,30 @@ export interface AIInterviewResponse {
 
   questions: AIQuestion[];
 }
+
+export interface EvaluateAnswerOptions {
+  question: string;
+  expectedTopics: string[];
+  transcript: string;
+  section: QuestionSection;
+  difficulty: Difficulty;
+  mode: InterviewMode;
+}
+
+export interface AIFollowUpQuestion {
+  question: string;
+  expectedTopics: string[];
+}
+
+export interface AIAnswerEvaluation {
+  score: number;
+  technicalScore: number;
+  communicationScore: number;
+  confidenceScore: number;
+  feedback: string;
+  strengths: string[];
+  weaknesses: string[];
+  missingConcepts: string[];
+  needsFollowUp: boolean;
+  followUpQuestion: AIFollowUpQuestion | null;
+}

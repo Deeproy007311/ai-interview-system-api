@@ -5,25 +5,40 @@ import {
   startInterview as validateInterviewStart,
   saveInterviewContent,
   markInterviewStarted,
+  completeInterview,
+  getInterviewById,
 } from "./interview.service";
 
 import { InterviewDocument } from "./interview.types";
 import {
   StartInterviewResponseDTO,
   InterviewQuestionDTO,
+  SubmitAnswerInput,
+  SubmitAnswerResponseDTO,
 } from "./interview.engine.dto";
 
 import {
   createQuestionsFromAI,
+  createQuestions,
   getQuestionsByInterview,
+  getQuestionById,
+  getNextQuestion,
+  getQuestionCount,
   markQuestionAsAsked,
+  markQuestionAnswered,
+  markQuestionEvaluated,
 } from "../question/question.service";
 import { QuestionDocument } from "../question/question.types";
 
-import { generateInterview } from "../ai/ai.service";
+import { generateInterview, evaluateAnswer } from "../ai/ai.service";
 import { AIQuestion, GenerateInterviewOptions } from "../ai/ai.types";
 
 import { getResumeById } from "../resume/resume.service";
+
+import {
+  createOrUpdateAnswer,
+  saveEvaluation,
+} from "../answer/answer.service";
 
 const buildAIOptions = async (
   interview: InterviewDocument,
@@ -85,8 +100,8 @@ const buildAIOptions = async (
 };
 
 // The AI's own numbering is not a reliable source of truth for a field
-// that's enforced unique at the database level. We keep its section and
-// content choices but always re-derive `order` from array position.
+// enforced unique at the database level. We keep its section/content
+// choices but always re-derive `order` from array position.
 const normalizeQuestionOrder = (questions: AIQuestion[]): AIQuestion[] =>
   questions.map((question, index) => ({
     ...question,
@@ -104,12 +119,11 @@ const startInterviewEngine = async (
   interviewId: string,
   userId: string,
 ): Promise<StartInterviewResponseDTO> => {
-  // 1. Ownership + status validation
   const interview = await validateInterviewStart(interviewId, userId);
 
-  // 2. Idempotency guard — if questions already exist (e.g. a previous
-  // attempt generated and saved them but crashed before flipping the
-  // interview to "in_progress"), don't call the AI again. Just resume.
+  // Idempotency guard: if questions already exist (a previous attempt
+  // generated and saved them but crashed before flipping status), skip
+  // AI generation entirely and just resume.
   let questions = await getQuestionsByInterview(interviewId);
   let welcomeMessage = interview.welcomeMessage;
   let interviewPlan = interview.interviewPlan;
@@ -141,10 +155,8 @@ const startInterviewEngine = async (
     );
   }
 
-  // 3. Flip status last — only once questions are confirmed persisted.
   await markInterviewStarted(interviewId);
 
-  // 4. Present the first question to the candidate.
   const firstQuestion = questions[0];
 
   if (!firstQuestion) {
@@ -154,7 +166,9 @@ const startInterviewEngine = async (
     );
   }
 
-  const askedQuestion = await markQuestionAsAsked(firstQuestion._id.toString());
+  const askedQuestion = await markQuestionAsAsked(
+    firstQuestion._id.toString(),
+  );
 
   return {
     welcomeMessage,
@@ -164,4 +178,129 @@ const startInterviewEngine = async (
   };
 };
 
-export { startInterviewEngine };
+const submitAnswerEngine = async (
+  userId: string,
+  input: SubmitAnswerInput,
+): Promise<SubmitAnswerResponseDTO> => {
+  const { interviewId, questionId, transcript } = input;
+
+  if (!transcript || !transcript.trim()) {
+    throw createHttpError(400, "Answer transcript is required.");
+  }
+
+  const interview = await getInterviewById(interviewId, userId);
+
+  if (interview.status !== "in_progress") {
+    throw createHttpError(
+      400,
+      "You can only submit answers for an interview that is in progress.",
+    );
+  }
+
+  const question = await getQuestionById(questionId);
+
+  if (question.interview.toString() !== interviewId) {
+    throw createHttpError(
+      400,
+      "This question does not belong to this interview.",
+    );
+  }
+
+  if (question.status === "pending") {
+    throw createHttpError(400, "This question has not been asked yet.");
+  }
+
+  if (question.status === "evaluated") {
+    throw createHttpError(409, "This question has already been answered.");
+  }
+
+  // Persist the transcript. Reuses an existing record if a prior attempt
+  // failed after saving but before evaluation completed.
+  const answer = await createOrUpdateAnswer({
+    interview: new Types.ObjectId(interviewId),
+    question: new Types.ObjectId(questionId),
+    owner: new Types.ObjectId(userId),
+    transcript,
+  });
+
+  if (question.status === "asked") {
+    await markQuestionAnswered(questionId);
+  }
+
+  const evaluation = await evaluateAnswer({
+    question: question.question,
+    expectedTopics: question.expectedTopics,
+    transcript,
+    section: question.section,
+    difficulty: interview.difficulty,
+    mode: interview.mode,
+  });
+
+  await saveEvaluation(answer._id, {
+    score: evaluation.score,
+    technicalScore: evaluation.technicalScore,
+    communicationScore: evaluation.communicationScore,
+    confidenceScore: evaluation.confidenceScore,
+    feedback: evaluation.feedback,
+    strengths: evaluation.strengths,
+    weaknesses: evaluation.weaknesses,
+    missingConcepts: evaluation.missingConcepts,
+  });
+
+  await markQuestionEvaluated(questionId);
+
+  // Follow-ups are capped at one level deep: a follow-up question can
+  // never spawn another follow-up. This bounds interview length without
+  // needing a separate counter — only original AI-generated questions
+  // are eligible to trigger one.
+  const canFollowUp = !question.isFollowUp;
+
+  if (canFollowUp && evaluation.needsFollowUp && evaluation.followUpQuestion) {
+    const questionCount = await getQuestionCount(interviewId);
+
+    const [followUpQuestion] = await createQuestions([
+      {
+        interview: new Types.ObjectId(interviewId),
+        order: questionCount + 1,
+        section: question.section,
+        question: evaluation.followUpQuestion.question,
+        expectedTopics: evaluation.followUpQuestion.expectedTopics,
+        status: "pending",
+        isFollowUp: true,
+        parentQuestion: question._id,
+      },
+    ]);
+
+    const askedFollowUp = await markQuestionAsAsked(
+      followUpQuestion._id.toString(),
+    );
+
+    return {
+      interviewComplete: false,
+      nextQuestion: toQuestionDTO(askedFollowUp),
+      totalQuestions: questionCount + 1,
+    };
+  }
+
+  const nextQuestion = await getNextQuestion(interviewId);
+
+  if (!nextQuestion) {
+    await completeInterview(interviewId);
+
+    return {
+      interviewComplete: true,
+      nextQuestion: null,
+      totalQuestions: await getQuestionCount(interviewId),
+    };
+  }
+
+  const askedQuestion = await markQuestionAsAsked(nextQuestion._id.toString());
+
+  return {
+    interviewComplete: false,
+    nextQuestion: toQuestionDTO(askedQuestion),
+    totalQuestions: await getQuestionCount(interviewId),
+  };
+};
+
+export { startInterviewEngine, submitAnswerEngine };
