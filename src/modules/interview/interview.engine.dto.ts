@@ -4,6 +4,7 @@ import { QuestionSection } from "../question/question.types";
 export interface InterviewQuestionDTO {
   id: string;
   order: number;
+  questionNumber: number;
   section: QuestionSection;
   question: string;
 }
@@ -23,6 +24,7 @@ export interface SubmitAnswerInput {
 
 export interface SubmitAnswerResponseDTO {
   interviewComplete: boolean;
+  transitionMessage: string | null;
   nextQuestion: InterviewQuestionDTO | null;
   totalQuestions: number;
 }

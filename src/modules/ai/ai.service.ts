@@ -141,6 +141,14 @@ const validateEvaluationResponse = (parsed: AIAnswerEvaluation): void => {
     throw new Error("AI evaluation is missing needsFollowUp.");
   }
 
+  if (
+    !parsed.transitionMessage ||
+    typeof parsed.transitionMessage !== "string" ||
+    !parsed.transitionMessage.trim()
+  ) {
+    throw new Error("AI evaluation is missing a transition message.");
+  }
+
   if (parsed.needsFollowUp) {
     if (
       !parsed.followUpQuestion ||

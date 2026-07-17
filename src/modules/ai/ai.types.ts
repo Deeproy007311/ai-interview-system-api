@@ -65,4 +65,5 @@ export interface AIAnswerEvaluation {
   missingConcepts: string[];
   needsFollowUp: boolean;
   followUpQuestion: AIFollowUpQuestion | null;
+  transitionMessage: string;
 }

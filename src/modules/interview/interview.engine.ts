@@ -24,6 +24,7 @@ import {
   getQuestionById,
   getNextQuestion,
   getQuestionCount,
+  getAskedQuestionCount,
   markQuestionAsAsked,
   markQuestionAnswered,
   markQuestionEvaluated,
@@ -108,9 +109,18 @@ const normalizeQuestionOrder = (questions: AIQuestion[]): AIQuestion[] =>
     order: index + 1,
   }));
 
-const toQuestionDTO = (question: QuestionDocument): InterviewQuestionDTO => ({
+// `order` reflects insertion order (needed for DB uniqueness) and can
+// jump around once follow-ups are inserted mid-interview. `questionNumber`
+// is the field that should actually be shown as progress — it always
+// increases by exactly 1 each time a question is asked, regardless of
+// whether it's an original question or a follow-up.
+const toQuestionDTO = (
+  question: QuestionDocument,
+  questionNumber: number,
+): InterviewQuestionDTO => ({
   id: question._id.toString(),
   order: question.order,
+  questionNumber,
   section: question.section,
   question: question.question,
 });
@@ -170,10 +180,12 @@ const startInterviewEngine = async (
     firstQuestion._id.toString(),
   );
 
+  const questionNumber = await getAskedQuestionCount(interviewId);
+
   return {
     welcomeMessage,
     interviewPlan,
-    firstQuestion: toQuestionDTO(askedQuestion),
+    firstQuestion: toQuestionDTO(askedQuestion, questionNumber),
     totalQuestions: questions.length,
   };
 };
@@ -214,8 +226,6 @@ const submitAnswerEngine = async (
     throw createHttpError(409, "This question has already been answered.");
   }
 
-  // Persist the transcript. Reuses an existing record if a prior attempt
-  // failed after saving but before evaluation completed.
   const answer = await createOrUpdateAnswer({
     interview: new Types.ObjectId(interviewId),
     question: new Types.ObjectId(questionId),
@@ -275,9 +285,12 @@ const submitAnswerEngine = async (
       followUpQuestion._id.toString(),
     );
 
+    const questionNumber = await getAskedQuestionCount(interviewId);
+
     return {
       interviewComplete: false,
-      nextQuestion: toQuestionDTO(askedFollowUp),
+      transitionMessage: evaluation.transitionMessage,
+      nextQuestion: toQuestionDTO(askedFollowUp, questionNumber),
       totalQuestions: questionCount + 1,
     };
   }
@@ -289,16 +302,19 @@ const submitAnswerEngine = async (
 
     return {
       interviewComplete: true,
+      transitionMessage: null,
       nextQuestion: null,
       totalQuestions: await getQuestionCount(interviewId),
     };
   }
 
   const askedQuestion = await markQuestionAsAsked(nextQuestion._id.toString());
+  const questionNumber = await getAskedQuestionCount(interviewId);
 
   return {
     interviewComplete: false,
-    nextQuestion: toQuestionDTO(askedQuestion),
+    transitionMessage: evaluation.transitionMessage,
+    nextQuestion: toQuestionDTO(askedQuestion, questionNumber),
     totalQuestions: await getQuestionCount(interviewId),
   };
 };

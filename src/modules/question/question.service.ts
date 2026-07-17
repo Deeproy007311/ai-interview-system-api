@@ -127,6 +127,17 @@ const getQuestionCount = async (interviewId: string) => {
   return await QuestionModel.countDocuments({ interview: interviewId });
 };
 
+const getAskedQuestionCount = async (interviewId: string) => {
+  if (!Types.ObjectId.isValid(interviewId)) {
+    throw createHttpError(400, "Invalid interview id.");
+  }
+
+  return await QuestionModel.countDocuments({
+    interview: interviewId,
+    status: { $in: ["asked", "answered", "evaluated"] },
+  });
+};
+
 export {
   createQuestions,
   createQuestionsFromAI,
@@ -137,5 +148,6 @@ export {
   markQuestionAsAsked,
   markQuestionEvaluated,
   getQuestionCount,
-  markQuestionAnswered
+  markQuestionAnswered,
+  getAskedQuestionCount,
 };

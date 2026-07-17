@@ -86,6 +86,7 @@ Requirements:
 - Ask architecture decisions.
 - Ask experience-based questions.
 - Finish with exactly one closing question.
+- When phrasing a question, reference specific details from the resume by name where natural (e.g. their degree, a named project, or a specific technology they listed) instead of generic phrasing.
 
 ${OUTPUT_FORMAT}
 `;
@@ -139,6 +140,7 @@ Combine:
 - Skills
 - Real-world scenarios
 - Problem solving
+- When phrasing a question, reference specific details from the resume by name where natural (e.g. their degree, a named project, or a specific technology they listed) instead of generic phrasing.
 
 Finish with one behavioral question.
 
@@ -213,6 +215,7 @@ Rules:
 - Feedback is for later review only — the candidate will not see it during the interview.
 - Only request a follow-up if the answer is genuinely incomplete, vague, or worth probing deeper. Most answers should NOT need one — do not request a follow-up just to be thorough.
 - A follow-up question must dig into the SAME topic the candidate just answered, never introduce a new topic.
+- After evaluating, write a short, natural transition line — one sentence, in the voice of a real interviewer moving the conversation forward. It must NOT state, hint at, or imply whether the answer was correct, complete, strong, or weak. It must NOT compliment the candidate. It should simply acknowledge the conversation is continuing (e.g. shifting topic, digging deeper, moving to the next area) the way a professional interviewer naturally paces a conversation.
 - Return ONLY valid JSON.
 `;
 
@@ -229,7 +232,8 @@ Return ONLY valid JSON in exactly this structure.
   "weaknesses": ["..."],
   "missingConcepts": ["..."],
   "needsFollowUp": false,
-  "followUpQuestion": null
+  "followUpQuestion": null,
+  "transitionMessage": "Let's shift over to how you'd approach database design."
 }
 
 If needsFollowUp is true, followUpQuestion must instead be:
@@ -238,6 +242,12 @@ If needsFollowUp is true, followUpQuestion must instead be:
   "question": "A single, specific follow-up question.",
   "expectedTopics": ["..."]
 }
+
+transitionMessage rules:
+- Always required, never empty.
+- One sentence, conversational, in the interviewer's voice.
+- Must never reveal or imply correctness of the answer.
+- Must never compliment the candidate.
 
 All scores are integers from 0 to 100.
 Return only JSON.
