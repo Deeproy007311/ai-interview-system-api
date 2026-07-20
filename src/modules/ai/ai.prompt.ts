@@ -85,8 +85,8 @@ Requirements:
 - Focus on technologies.
 - Ask architecture decisions.
 - Ask experience-based questions.
-- Finish with exactly one closing question.
 - When phrasing a question, reference specific details from the resume by name where natural (e.g. their degree, a named project, or a specific technology they listed) instead of generic phrasing.
+- Finish with exactly one closing question.
 
 ${OUTPUT_FORMAT}
 `;
@@ -140,6 +140,7 @@ Combine:
 - Skills
 - Real-world scenarios
 - Problem solving
+
 - When phrasing a question, reference specific details from the resume by name where natural (e.g. their degree, a named project, or a specific technology they listed) instead of generic phrasing.
 
 Finish with one behavioral question.
@@ -215,7 +216,12 @@ Rules:
 - Feedback is for later review only — the candidate will not see it during the interview.
 - Only request a follow-up if the answer is genuinely incomplete, vague, or worth probing deeper. Most answers should NOT need one — do not request a follow-up just to be thorough.
 - A follow-up question must dig into the SAME topic the candidate just answered, never introduce a new topic.
-- After evaluating, write a short, natural transition line — one sentence, in the voice of a real interviewer moving the conversation forward. It must NOT state, hint at, or imply whether the answer was correct, complete, strong, or weak. It must NOT compliment the candidate. It should simply acknowledge the conversation is continuing (e.g. shifting topic, digging deeper, moving to the next area) the way a professional interviewer naturally paces a conversation.
+- You will be told what question is coming up next in the plan (or that none remain). Write a short, natural, one-sentence transition line in the voice of a real interviewer.
+  - If you decide a follow-up is needed, the transition line MUST bridge toward your OWN follow-up question's topic — not the upcoming planned question.
+  - If you do NOT request a follow-up, the transition line MUST bridge toward the upcoming planned question's general topic.
+  - The transition line must NEVER quote or closely paraphrase the exact wording of the next question — only gesture at the general area (e.g. "let's move on to how you'd approach deployment" rather than restating the question).
+  - If there is no upcoming question and you are not requesting a follow-up, write a brief natural wrap-up line instead.
+- The transition line must NOT state, hint at, or imply whether the answer was correct, complete, strong, or weak, and must NOT compliment the candidate.
 - Return ONLY valid JSON.
 `;
 
@@ -246,6 +252,7 @@ If needsFollowUp is true, followUpQuestion must instead be:
 transitionMessage rules:
 - Always required, never empty.
 - One sentence, conversational, in the interviewer's voice.
+- Must always match whichever question is actually coming next (your follow-up, or the provided upcoming question) — never invent an unrelated topic.
 - Must never reveal or imply correctness of the answer.
 - Must never compliment the candidate.
 
@@ -259,6 +266,13 @@ Do not explain anything.
 export const buildEvaluationPrompt = (
   options: EvaluateAnswerOptions,
 ): InterviewPrompt => {
+  const upcomingContext = options.upcomingQuestion
+    ? `The next planned question in the interview (section: ${options.upcomingSection}) is:
+${options.upcomingQuestion}
+
+If you do NOT request a follow-up, your transitionMessage must naturally bridge toward this topic — without quoting or closely paraphrasing its exact wording.`
+    : `There is no further planned question. This may be the final question of the interview unless you request a follow-up.`;
+
   const userPrompt = `
 Evaluate this candidate's answer.
 
@@ -273,6 +287,8 @@ ${options.expectedTopics.join(", ") || "None specified"}
 
 Candidate's answer:
 ${options.transcript}
+
+${upcomingContext}
 
 ${EVALUATION_OUTPUT_FORMAT}
 `;

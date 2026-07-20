@@ -47,6 +47,8 @@ export interface EvaluateAnswerOptions {
   section: QuestionSection;
   difficulty: Difficulty;
   mode: InterviewMode;
+  upcomingQuestion: string | null;
+  upcomingSection: QuestionSection | null;
 }
 
 export interface AIFollowUpQuestion {

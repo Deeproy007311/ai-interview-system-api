@@ -131,9 +131,6 @@ const startInterviewEngine = async (
 ): Promise<StartInterviewResponseDTO> => {
   const interview = await validateInterviewStart(interviewId, userId);
 
-  // Idempotency guard: if questions already exist (a previous attempt
-  // generated and saved them but crashed before flipping status), skip
-  // AI generation entirely and just resume.
   let questions = await getQuestionsByInterview(interviewId);
   let welcomeMessage = interview.welcomeMessage;
   let interviewPlan = interview.interviewPlan;
@@ -237,6 +234,15 @@ const submitAnswerEngine = async (
     await markQuestionAnswered(questionId);
   }
 
+  // Peek at the next pre-planned question BEFORE evaluating, so the AI's
+  // transitionMessage can be grounded in what's actually coming up next
+  // instead of guessing. We reuse this exact document afterward (if no
+  // follow-up is triggered) rather than querying again — this both fixes
+  // the transition/question mismatch and avoids a redundant DB call.
+  const upcomingPlannedQuestion = await getNextQuestion(interviewId);
+
+  const canFollowUp = !question.isFollowUp;
+
   const evaluation = await evaluateAnswer({
     question: question.question,
     expectedTopics: question.expectedTopics,
@@ -244,6 +250,8 @@ const submitAnswerEngine = async (
     section: question.section,
     difficulty: interview.difficulty,
     mode: interview.mode,
+    upcomingQuestion: upcomingPlannedQuestion?.question ?? null,
+    upcomingSection: upcomingPlannedQuestion?.section ?? null,
   });
 
   await saveEvaluation(answer._id, {
@@ -260,11 +268,7 @@ const submitAnswerEngine = async (
   await markQuestionEvaluated(questionId);
 
   // Follow-ups are capped at one level deep: a follow-up question can
-  // never spawn another follow-up. This bounds interview length without
-  // needing a separate counter — only original AI-generated questions
-  // are eligible to trigger one.
-  const canFollowUp = !question.isFollowUp;
-
+  // never spawn another follow-up.
   if (canFollowUp && evaluation.needsFollowUp && evaluation.followUpQuestion) {
     const questionCount = await getQuestionCount(interviewId);
 
@@ -295,9 +299,7 @@ const submitAnswerEngine = async (
     };
   }
 
-  const nextQuestion = await getNextQuestion(interviewId);
-
-  if (!nextQuestion) {
+  if (!upcomingPlannedQuestion) {
     await completeInterview(interviewId);
 
     return {
@@ -308,7 +310,9 @@ const submitAnswerEngine = async (
     };
   }
 
-  const askedQuestion = await markQuestionAsAsked(nextQuestion._id.toString());
+  const askedQuestion = await markQuestionAsAsked(
+    upcomingPlannedQuestion._id.toString(),
+  );
   const questionNumber = await getAskedQuestionCount(interviewId);
 
   return {
