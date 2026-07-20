@@ -1,4 +1,4 @@
-import { GenerateInterviewOptions, EvaluateAnswerOptions } from "./ai.types";
+import { GenerateInterviewOptions, EvaluateAnswerOptions, GenerateReportOptions } from "./ai.types";
 
 interface InterviewPrompt {
   systemPrompt: string;
@@ -295,6 +295,71 @@ ${EVALUATION_OUTPUT_FORMAT}
 
   return {
     systemPrompt: EVALUATION_SYSTEM_PROMPT,
+    userPrompt,
+  };
+};
+
+const REPORT_SYSTEM_PROMPT = `
+You are a Senior Technical Interviewer preparing a final written performance report for a candidate after a completed mock interview.
+
+Rules:
+
+- Base your synthesis only on the evaluation data provided — do not invent facts not supported by it.
+- Deduplicate and consolidate: if multiple answers show the same strength or weakness, mention it once, not repeatedly.
+- Be specific and constructive, not generic.
+- Improvement suggestions must be actionable, not vague ("practice more").
+- Recommended learning path should be an ordered list of concrete topics or skills to study next, based on the weaknesses and missed concepts observed.
+- Do not mention that this is an automated or AI-generated evaluation.
+- Return ONLY valid JSON.
+`;
+
+const REPORT_OUTPUT_FORMAT = `
+Return ONLY valid JSON in exactly this structure.
+
+{
+  "summary": "A short 2-4 sentence overview of the candidate's overall performance.",
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "missedConcepts": ["..."],
+  "improvementSuggestions": ["..."],
+  "learningPath": ["..."]
+}
+
+Return only JSON.
+Do not return markdown.
+Do not wrap JSON inside code blocks.
+Do not explain anything.
+`;
+
+export const buildReportPrompt = (
+  options: GenerateReportOptions,
+): InterviewPrompt => {
+  const answersBlock = options.answers
+    .map(
+      (a, i) => `
+Question ${i + 1} (${a.section}):
+${a.question}
+
+Scores — Overall: ${a.score}, Technical: ${a.technicalScore}, Communication: ${a.communicationScore}, Confidence: ${a.confidenceScore}
+Strengths: ${a.strengths.join(", ") || "None noted"}
+Weaknesses: ${a.weaknesses.join(", ") || "None noted"}
+Missing concepts: ${a.missingConcepts.join(", ") || "None noted"}
+`,
+    )
+    .join("\n---\n");
+
+  const userPrompt = `
+Prepare a final performance report for this ${options.mode} interview at ${options.difficulty} difficulty.
+
+Here is the evaluation data for each question answered:
+
+${answersBlock}
+
+${REPORT_OUTPUT_FORMAT}
+`;
+
+  return {
+    systemPrompt: REPORT_SYSTEM_PROMPT,
     userPrompt,
   };
 };

@@ -5,8 +5,14 @@ import {
   GenerateInterviewOptions,
   AIAnswerEvaluation,
   EvaluateAnswerOptions,
+  AIFeedbackReport,
+  GenerateReportOptions,
 } from "./ai.types";
-import { buildInterviewPrompt, buildEvaluationPrompt } from "./ai.prompt";
+import {
+  buildInterviewPrompt,
+  buildEvaluationPrompt,
+  buildReportPrompt,
+} from "./ai.prompt";
 import { QuestionSection } from "../question/question.types";
 
 import { generateCompletion } from "../../services/llm.service";
@@ -141,14 +147,6 @@ const validateEvaluationResponse = (parsed: AIAnswerEvaluation): void => {
     throw new Error("AI evaluation is missing needsFollowUp.");
   }
 
-  if (
-    !parsed.transitionMessage ||
-    typeof parsed.transitionMessage !== "string" ||
-    !parsed.transitionMessage.trim()
-  ) {
-    throw new Error("AI evaluation is missing a transition message.");
-  }
-
   if (parsed.needsFollowUp) {
     if (
       !parsed.followUpQuestion ||
@@ -165,6 +163,14 @@ const validateEvaluationResponse = (parsed: AIAnswerEvaluation): void => {
     }
   } else {
     parsed.followUpQuestion = null;
+  }
+
+  if (
+    !parsed.transitionMessage ||
+    typeof parsed.transitionMessage !== "string" ||
+    !parsed.transitionMessage.trim()
+  ) {
+    throw new Error("AI evaluation is missing a transition message.");
   }
 };
 
@@ -206,4 +212,64 @@ const evaluateAnswer = async (
   return parseEvaluationResponse(completion);
 };
 
-export { generateInterview, evaluateAnswer };
+const validateReportResponse = (parsed: AIFeedbackReport): void => {
+  if (!parsed.summary || typeof parsed.summary !== "string") {
+    throw new Error("AI report is missing a summary.");
+  }
+
+  type ArrayFields = "strengths" | "weaknesses" | "missedConcepts" | "improvementSuggestions" | "learningPath";
+
+  const arrayFields: ArrayFields[] = [
+    "strengths",
+    "weaknesses",
+    "missedConcepts",
+    "improvementSuggestions",
+    "learningPath",
+  ];
+
+  for (const field of arrayFields) {
+    if (!Array.isArray(parsed[field])) {
+      parsed[field] = [];
+    }
+  }
+};
+
+const parseReportResponse = (content: string): AIFeedbackReport => {
+  let parsed: AIFeedbackReport;
+
+  try {
+    parsed = JSON.parse(content) as AIFeedbackReport;
+  } catch (error) {
+    console.error("Report JSON Parse Error:", error);
+    throw createHttpError(500, "AI returned malformed report JSON.");
+  }
+
+  try {
+    validateReportResponse(parsed);
+  } catch (error) {
+    console.error("Report Validation Error:", error, parsed);
+    throw createHttpError(
+      500,
+      "AI returned a report in an unexpected format.",
+    );
+  }
+
+  return parsed;
+};
+
+const generateReport = async (
+  options: GenerateReportOptions,
+): Promise<AIFeedbackReport> => {
+  const { systemPrompt, userPrompt } = buildReportPrompt(options);
+
+  const completion = await generateCompletion({
+    systemPrompt,
+    userPrompt,
+    temperature: 0.4,
+    maxTokens: 2048,
+  });
+
+  return parseReportResponse(completion);
+};
+
+export { generateInterview, evaluateAnswer, generateReport };

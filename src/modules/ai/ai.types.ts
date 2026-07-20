@@ -69,3 +69,30 @@ export interface AIAnswerEvaluation {
   followUpQuestion: AIFollowUpQuestion | null;
   transitionMessage: string;
 }
+
+export interface AnswerSummaryInput {
+  question: string;
+  section: QuestionSection;
+  score: number;
+  technicalScore: number;
+  communicationScore: number;
+  confidenceScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  missingConcepts: string[];
+}
+
+export interface GenerateReportOptions {
+  mode: InterviewMode;
+  difficulty: Difficulty;
+  answers: AnswerSummaryInput[];
+}
+
+export interface AIFeedbackReport {
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  missedConcepts: string[];
+  improvementSuggestions: string[];
+  learningPath: string[];
+}

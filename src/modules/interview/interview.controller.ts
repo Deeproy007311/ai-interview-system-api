@@ -9,6 +9,7 @@ import {
 } from "./interview.service";
 
 import { startInterviewEngine, submitAnswerEngine } from "./interview.engine";
+import { getOrGenerateReport } from "../feedback/feedback.engine";
 
 const createInterview = async (
   req: AuthRequest,
@@ -147,10 +148,31 @@ const submitAnswer = async (
   }
 };
 
+const getInterviewReport = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const report = await getOrGenerateReport(
+      req.params.id,
+      req.user._id.toString(),
+    );
+
+    res.status(200).json({
+      success: true,
+      data: report,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   createInterview,
   getMyInterviews,
   getInterviewById,
   startInterview,
-  submitAnswer
+  submitAnswer,
+  getInterviewReport
 };
