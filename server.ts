@@ -2,7 +2,7 @@ import { config } from "./src/config/config";
 import app from "./src/app";
 import connectDB from "./src/config/db"
 
-const startServer =  async() => {
+const startServer = async () => {
 
   await connectDB();
 

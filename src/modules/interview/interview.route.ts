@@ -1,6 +1,7 @@
 import express from "express";
 
 import auth from "../../middleware/auth";
+import { aiLimiter } from "../../middleware/rateLimiter";
 
 import {
   createInterview,
@@ -23,10 +24,10 @@ interviewRouter.get("/", auth, getMyInterviews);
 interviewRouter.get("/:id", auth, getInterviewById);
 
 // Start Interview
-interviewRouter.post("/:id/start", auth, startInterview);
+interviewRouter.post("/:id/start", auth, aiLimiter, startInterview);
 
-interviewRouter.post("/:id/answer", auth, submitAnswer);
+interviewRouter.post("/:id/answer", auth, aiLimiter, submitAnswer);
 
-interviewRouter.post("/:id/report", auth, getInterviewReport);
+interviewRouter.post("/:id/report", auth, aiLimiter, getInterviewReport);
 
 export default interviewRouter;
