@@ -31,11 +31,11 @@ const generateCompletion = async ({
       messages: [
         ...(systemPrompt
           ? [
-              {
-                role: "system" as const,
-                content: systemPrompt,
-              },
-            ]
+            {
+              role: "system" as const,
+              content: systemPrompt,
+            },
+          ]
           : []),
         {
           role: "user",

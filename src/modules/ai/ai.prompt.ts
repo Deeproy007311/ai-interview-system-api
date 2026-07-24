@@ -59,6 +59,10 @@ Return ONLY valid JSON in exactly this structure.
   ]
 }
 
+CRITICAL RULES FOR SECTIONS:
+- The section name inside "interviewPlan.sections" and the section of each item inside "questions" MUST strictly be one of: "introduction", "resume", "technical", "behavioral", "hr", "closing".
+- Do NOT invent or use other section names (such as "communication", "leadership", etc.). Map any such behavioral questions to the "behavioral" or "hr" sections.
+
 Return only JSON.
 Do not return markdown.
 Do not wrap JSON inside code blocks.
@@ -307,6 +311,7 @@ Rules:
 - Base your synthesis only on the evaluation data provided — do not invent facts not supported by it.
 - Deduplicate and consolidate: if multiple answers show the same strength or weakness, mention it once, not repeatedly.
 - Be specific and constructive, not generic.
+- Keep the feedback concise: limit each of the list fields ("strengths", "weaknesses", "missedConcepts", "improvementSuggestions", and "learningPath") to a maximum of 3-5 key, high-impact items.
 - Improvement suggestions must be actionable, not vague ("practice more").
 - Recommended learning path should be an ordered list of concrete topics or skills to study next, based on the weaknesses and missed concepts observed.
 - Do not mention that this is an automated or AI-generated evaluation.

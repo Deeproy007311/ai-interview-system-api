@@ -217,21 +217,18 @@ const validateReportResponse = (parsed: AIFeedbackReport): void => {
     throw new Error("AI report is missing a summary.");
   }
 
-  type ArrayFields = "strengths" | "weaknesses" | "missedConcepts" | "improvementSuggestions" | "learningPath";
-
-  const arrayFields: ArrayFields[] = [
-    "strengths",
-    "weaknesses",
-    "missedConcepts",
-    "improvementSuggestions",
-    "learningPath",
-  ];
-
-  for (const field of arrayFields) {
-    if (!Array.isArray(parsed[field])) {
-      parsed[field] = [];
-    }
-  }
+  // Written as individual explicit checks (matching the pattern already
+  // used in validateEvaluationResponse above) rather than a generic
+  // keyof-based loop — "summary" being a string alongside string[]
+  // fields on the same interface makes any generic loop over
+  // `keyof AIFeedbackReport` awkward to type correctly, so explicit
+  // per-field checks are both simpler and safer here.
+  if (!Array.isArray(parsed.strengths)) parsed.strengths = [];
+  if (!Array.isArray(parsed.weaknesses)) parsed.weaknesses = [];
+  if (!Array.isArray(parsed.missedConcepts)) parsed.missedConcepts = [];
+  if (!Array.isArray(parsed.improvementSuggestions))
+    parsed.improvementSuggestions = [];
+  if (!Array.isArray(parsed.learningPath)) parsed.learningPath = [];
 };
 
 const parseReportResponse = (content: string): AIFeedbackReport => {
@@ -266,7 +263,7 @@ const generateReport = async (
     systemPrompt,
     userPrompt,
     temperature: 0.4,
-    maxTokens: 2048,
+    maxTokens: 4096,
   });
 
   return parseReportResponse(completion);
